@@ -32,15 +32,19 @@ struct MeasurementDetailView: View {
                 .padding(.top)
             
             // Используем новый фреймворк Charts (iOS 16+)
-            Chart(Array(record.dataPoints.enumerated()), id: \.offset) { index, value in
-                LineMark(
-                    x: .value("Time", index),
-                    y: .value("Value", value)
-                )
+            if #available(iOS 16.0, *) {
+                Chart(Array(record.dataPoints.enumerated()), id: \.offset) { index, value in
+                    LineMark(
+                        x: .value("Time", index),
+                        y: .value("Value", value)
+                    )
+                }
+                .chartYScale(domain: 0...(record.peakValue * 1.2)) // Динамический масштаб
+                .frame(height: 250)
+                .foregroundColor(Color.theme.accent)
+            } else {
+                // Fallback on earlier versions
             }
-            .chartYScale(domain: 0...(record.peakValue * 1.2)) // Динамический масштаб
-            .frame(height: 250)
-            .foregroundColor(Color.theme.accent)
             
             Spacer()
         }

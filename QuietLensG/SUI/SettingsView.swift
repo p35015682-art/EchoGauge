@@ -25,79 +25,91 @@ struct SettingsView: View {
 
     var body: some View {
         NavigationView {
-            Form {
-                
-                // MARK: - Calibration Section
-                Section(header: Text("Calibration")) {
-                    Button("Calibrate to Current Environment") {
-                        audioManager.calibrate()
-                        setCalibrationAlert(title: "Calibrated", message: "The current noise level is now set as the baseline offset.")
+            if #available(iOS 15.0, *) {
+                Form {
+                    
+                    // MARK: - Calibration Section
+                    Section(header: Text("Calibration")) {
+                        Button("Calibrate to Current Environment") {
+                            audioManager.calibrate()
+                            setCalibrationAlert(title: "Calibrated", message: "The current noise level is now set as the baseline offset.")
+                        }
+                        
+                        if #available(iOS 15.0, *) {
+                            Button("Reset Calibration", role: .destructive) {
+                                audioManager.resetCalibration()
+                                setCalibrationAlert(title: "Reset Complete", message: "Calibration has been reset to default values.")
+                            }
+                        } else {
+                            // Fallback on earlier versions
+                        }
                     }
                     
-                    Button("Reset Calibration", role: .destructive) {
-                        audioManager.resetCalibration()
-                        setCalibrationAlert(title: "Reset Complete", message: "Calibration has been reset to default values.")
-                    }
-                }
-                
-                // MARK: - Notifications Section
-                Section(header: Text("Notifications")) {
-                    // Используем Binding с кастомной логикой set
-                    Toggle("Enable Reminders", isOn: Binding<Bool>(
-                        get: { self.remindersEnabled },
-                        set: { isEnabled in
-                            if isEnabled {
-                                // Если пользователь пытается включить, запускаем процесс запроса разрешения
-                                requestNotificationPermission()
-                            } else {
-                                // Если выключает, просто отменяем уведомления
-                                NotificationManager.shared.cancelReminders()
-                                self.remindersEnabled = false
-                            }
-                        }
-                    ))
-
-                    // Слайдер показывается только если уведомления включены
-                    if remindersEnabled {
-                        VStack(alignment: .leading, spacing: 10) {
-                            Text("Remind me every \(Int(reminderInterval)) hours")
-                            Slider(value: $reminderInterval, in: 1...24, step: 1)
-                                .onChange(of: reminderInterval) { _ in
-                                    // Немедленно обновляем расписание при изменении слайдера
-                                    if remindersEnabled {
-                                        NotificationManager.shared.scheduleReminders(intervalInHours: Int(reminderInterval))
-                                    }
+                    // MARK: - Notifications Section
+                    Section(header: Text("Notifications")) {
+                        // Используем Binding с кастомной логикой set
+                        Toggle("Enable Reminders", isOn: Binding<Bool>(
+                            get: { self.remindersEnabled },
+                            set: { isEnabled in
+                                if isEnabled {
+                                    // Если пользователь пытается включить, запускаем процесс запроса разрешения
+                                    requestNotificationPermission()
+                                } else {
+                                    // Если выключает, просто отменяем уведомления
+                                    NotificationManager.shared.cancelReminders()
+                                    self.remindersEnabled = false
                                 }
+                            }
+                        ))
+                        
+                        // Слайдер показывается только если уведомления включены
+                        if remindersEnabled {
+                            VStack(alignment: .leading, spacing: 10) {
+                                Text("Remind me every \(Int(reminderInterval)) hours")
+                                Slider(value: $reminderInterval, in: 1...24, step: 1)
+                                    .onChange(of: reminderInterval) { _ in
+                                        // Немедленно обновляем расписание при изменении слайдера
+                                        if remindersEnabled {
+                                            NotificationManager.shared.scheduleReminders(intervalInHours: Int(reminderInterval))
+                                        }
+                                    }
+                            }
+                            .padding(.vertical, 5)
                         }
-                        .padding(.vertical, 5)
+                    }
+                    
+                    // MARK: - About Section
+                    Section(header: Text("About")) {
+                        HStack {
+                            Text("App Version")
+                            Spacer()
+                            Text("1.0.0").foregroundColor(.secondary)
+                        }
+                        Link("Privacy Policy", destination: URL(string: "https://github.com")!)
                     }
                 }
-                
-                // MARK: - About Section
-                Section(header: Text("About")) {
-                    HStack {
-                        Text("App Version")
-                        Spacer()
-                        Text("1.0.0").foregroundColor(.secondary)
+                .navigationTitle("Settings")
+                // Алерт для калибровки
+                .alert(calibrationAlertTitle, isPresented: $showCalibrationAlert) {
+                    if #available(iOS 15.0, *) {
+                        Button("OK", role: .cancel) {}
+                    } else {
+                        // Fallback on earlier versions
                     }
-                    Link("Privacy Policy", destination: URL(string: "https://github.com")!)
+                } message: {
+                    Text(calibrationAlertMessage)
                 }
-            }
-            .navigationTitle("Settings")
-            // Алерт для калибровки
-            .alert(calibrationAlertTitle, isPresented: $showCalibrationAlert) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text(calibrationAlertMessage)
-            }
-            // Алерт для случая, когда доступ к уведомлениям запрещен
-            .alert("Permission Denied", isPresented: $showPermissionDeniedAlert) {
-                Button("Cancel", role: .cancel) {}
-                Button("Open Settings") {
-                    NotificationManager.shared.openAppSettings()
+                // Алерт для случая, когда доступ к уведомлениям запрещен
+                .alert("Permission Denied", isPresented: $showPermissionDeniedAlert) {
+                    Button("Cancel", role: .cancel) {}
+                    Button("Open Settings") {
+                        NotificationManager.shared.openAppSettings()
+                    }
+                } message: {
+                    Text("To enable reminders, please allow notifications for EchoGauge in your device's Settings.")
                 }
-            } message: {
-                Text("To enable reminders, please allow notifications for EchoGauge in your device's Settings.")
+            } else {
+                // Fallback on earlier versions
             }
         }
         .accentColor(Color.theme.accent)

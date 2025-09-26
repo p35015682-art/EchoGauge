@@ -13,46 +13,55 @@ struct HistoryView: View {
     @State private var shareableURL: URL?
     
     var body: some View {
-        NavigationView {
-            ZStack {
-                // Показываем заглушку, если массив records пуст
-                if records.isEmpty {
-                    EmptyHistoryView()
-                } else {
-                    List {
-                        ForEach(records) { record in
-                            HistoryCell(record: record)
-                                .onTapGesture {
-                                    selectedRecord = record
-                                }
+        if #available(iOS 15.0, *) {
+            
+            NavigationView {
+                ZStack {
+                    // Показываем заглушку, если массив records пуст
+                    if records.isEmpty {
+                        EmptyHistoryView()
+                    } else {
+                        List {
+                            ForEach(records) { record in 
+                                HistoryCell(record: record)
+                                    .onTapGesture {
+                                        selectedRecord = record
+                                    }
+                            }
+                            .onDelete(perform: deleteRecord)
                         }
-                        .onDelete(perform: deleteRecord)
                     }
                 }
-            }
-            .navigationTitle("History")
-            .toolbar {
-                // Добавляем условие, чтобы кнопки не показывались на пустом экране
-                if !records.isEmpty {
+                .navigationTitle("History")
+                .toolbar {
+                    
                     ToolbarItem(placement: .navigationBarTrailing) {
-                        Button(action: exportCSV) {
-                            Image(systemName: "square.and.arrow.up")
+                        if !records.isEmpty {
+                            Button(action: exportCSV) {
+                                Image(systemName: "square.and.arrow.up")
+                            }
                         }
+                        
                     }
                     ToolbarItem(placement: .navigationBarLeading) {
-                        EditButton()
+                        if !records.isEmpty {
+                            EditButton()
+                        }
                     }
                 }
+                .onAppear {
+                    records = PersistenceManager.shared.load()
+                }
+                .sheet(item: $selectedRecord) { record in
+                    MeasurementDetailView(record: record)
+                }
+                .sheet(item: $shareableURL) { url in
+                    ShareSheet(activityItems: [url])
+                }
             }
-            .onAppear {
-                records = PersistenceManager.shared.load()
-            }
-            .sheet(item: $selectedRecord) { record in
-                MeasurementDetailView(record: record)
-            }
-            .sheet(item: $shareableURL) { url in
-                ShareSheet(activityItems: [url])
-            }
+        }
+        else {
+            
         }
     }
     
